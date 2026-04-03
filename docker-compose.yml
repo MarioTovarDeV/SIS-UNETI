@@ -5,7 +5,7 @@ services:
       context: .
       dockerfile_inline: |
         FROM postgres:18-alpine
-        COPY database/data_soberana.sql /docker-entrypoint-initdb.d/01_soberana.sql
+        COPY database/ /docker-entrypoint-initdb.d/
     container_name: sis_uneti_db
     environment:
       POSTGRES_DB: data_soberana
@@ -14,7 +14,7 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - E:/DockerData/sis_uneti_soberana:/var/lib/postgresql
 
   # Infraestructura: Mensajería Redis
   redis:
