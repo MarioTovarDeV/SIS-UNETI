@@ -139,8 +139,8 @@ CREATE TABLE seguridad.roles (
     nivel_jerarquico INT NOT NULL CHECK (nivel_jerarquico BETWEEN 1 AND 5),
     es_rol_sistema BOOLEAN DEFAULT true,
     permisos_default JSONB NOT NULL DEFAULT '{}',
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    creado TIMESTAMPTZ NOT NULL DEFAULT now(),
+    actualizado TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 COMMENT ON TABLE seguridad.roles IS 'Catálogo de roles del sistema para RBAC';
 
@@ -150,7 +150,7 @@ CREATE TABLE seguridad.permisos (
     codigo VARCHAR(80) UNIQUE NOT NULL,
     descripcion TEXT NOT NULL,
     modulo VARCHAR(50) NOT NULL,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    creado TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 COMMENT ON TABLE seguridad.permisos IS 'Permisos granulares del sistema';
 
@@ -158,7 +158,7 @@ COMMENT ON TABLE seguridad.permisos IS 'Permisos granulares del sistema';
 CREATE TABLE seguridad.usuarios (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     cedula VARCHAR(20) UNIQUE NOT NULL,
-    email CITEXT UNIQUE NOT NULL,
+    correo_principal CITEXT UNIQUE NOT NULL,
     email_alternativo CITEXT,
     password_hash VARCHAR(255) NOT NULL,
     salt VARCHAR(255) NOT NULL,
@@ -179,13 +179,13 @@ CREATE TABLE seguridad.usuarios (
     fecha_bloqueo TIMESTAMPTZ,
     debe_cambiar_password BOOLEAN DEFAULT false,
     fecha_expiracion_password TIMESTAMPTZ,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    creado TIMESTAMPTZ NOT NULL DEFAULT now(),
+    actualizado TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_by UUID REFERENCES seguridad.usuarios(id),
     updated_by UUID REFERENCES seguridad.usuarios(id),
     hash_integridad VARCHAR(64) GENERATED ALWAYS AS (
         encode(digest(
-            cedula::text || email::text || nombres || apellidos || activo::text,
+            cedula::text || correo_principal::text || nombres || apellidos || activo::text,
             'sha256'
         ), 'hex')
     ) STORED
@@ -214,8 +214,8 @@ COMMENT ON TABLE seguridad.rol_permisos IS 'Asignación de permisos a roles';
 CREATE TABLE seguridad.sesiones (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     usuario_id UUID NOT NULL REFERENCES seguridad.usuarios(id) ON DELETE CASCADE,
-    token_hash VARCHAR(255) NOT NULL,
-    refresh_token_hash VARCHAR(255),
+    token_hash TEXT NOT NULL,
+    refresh_token_hash TEXT,
     ip_address INET,
     user_agent TEXT,
     dispositivo_fingerprint VARCHAR(255),
@@ -246,12 +246,12 @@ COMMENT ON TABLE seguridad.intentos_autenticacion IS 'Registro de intentos de au
 CREATE TABLE seguridad.auth_refresh_tokens (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     usuario_id UUID NOT NULL REFERENCES seguridad.usuarios(id) ON DELETE CASCADE,
-    token_hash VARCHAR(255) NOT NULL,
+    token_hash TEXT NOT NULL,
     ip_address VARCHAR(45),
     user_agent TEXT,
     revoked_at TIMESTAMPTZ,
     expires_at TIMESTAMPTZ NOT NULL,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    creado TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 COMMENT ON TABLE seguridad.auth_refresh_tokens IS 'Tokens de refresco para autenticación JWT';
 
@@ -266,14 +266,14 @@ CREATE TABLE seguridad.notificaciones (
     leida BOOLEAN NOT NULL DEFAULT false,
     fecha_lectura TIMESTAMPTZ,
     enviada_por UUID REFERENCES seguridad.usuarios(id),
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    creado TIMESTAMPTZ NOT NULL DEFAULT now(),
     fecha_expiracion TIMESTAMPTZ
 );
 COMMENT ON TABLE seguridad.notificaciones IS 'Notificaciones del sistema para usuarios';
 
 -- Índices de seguridad
 CREATE INDEX idx_usuarios_cedula ON seguridad.usuarios(cedula);
-CREATE INDEX idx_usuarios_email ON seguridad.usuarios(email);
+CREATE INDEX idx_usuarios_email ON seguridad.usuarios(correo_principal);
 CREATE INDEX idx_usuarios_activo ON seguridad.usuarios(activo) WHERE activo = true;
 CREATE INDEX idx_usuarios_estado ON seguridad.usuarios(estado_usuario);
 CREATE INDEX idx_sesiones_usuario ON seguridad.sesiones(usuario_id, estado);
@@ -281,7 +281,7 @@ CREATE INDEX idx_sesiones_token ON seguridad.sesiones(token_hash);
 CREATE INDEX idx_sesiones_expiracion ON seguridad.sesiones(fecha_expiracion) WHERE estado = 'ACTIVA';
 CREATE INDEX idx_intentos_ip_fecha ON seguridad.intentos_autenticacion(ip_address, fecha_intento DESC);
 CREATE INDEX idx_intentos_cedula ON seguridad.intentos_autenticacion(cedula_intentada);
-CREATE INDEX idx_notificaciones_usuario ON seguridad.notificaciones(usuario_id, leida, created_at DESC);
+CREATE INDEX idx_notificaciones_usuario ON seguridad.notificaciones(usuario_id, leida, creado DESC);
 
 -- =====================================================================
 -- ESQUEMA ACADÉMICO - 15 TABLAS
@@ -298,8 +298,8 @@ CREATE TABLE academico.pnf_carreras (
     resolucion_autorizacion VARCHAR(50),
     fecha_autorizacion DATE,
     estado VARCHAR(20) DEFAULT 'ACTIVO' CHECK (estado IN ('ACTIVO', 'INACTIVO', 'EN_REVISION')),
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    creado TIMESTAMPTZ NOT NULL DEFAULT now(),
+    actualizado TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 COMMENT ON TABLE academico.pnf_carreras IS 'Programas Nacionales de Formación (carreras)';
 
@@ -313,8 +313,8 @@ CREATE TABLE academico.trayectos (
     creditos_requeridos INT DEFAULT 0,
     uc_obligatorias INT DEFAULT 0,
     uc_electivas INT DEFAULT 0,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    creado TIMESTAMPTZ NOT NULL DEFAULT now(),
+    actualizado TIMESTAMPTZ NOT NULL DEFAULT now(),
     UNIQUE(pnf_id, numero_trayecto)
 );
 COMMENT ON TABLE academico.trayectos IS 'Trayectos académicos (semestres/años) de cada PNF';
@@ -337,8 +337,8 @@ CREATE TABLE academico.unidades_curriculares (
     nota_minima_aprobacion INT DEFAULT 10 CHECK (nota_minima_aprobacion BETWEEN 1 AND 20),
     permite_recuperacion BOOLEAN DEFAULT true,
     estado_uc VARCHAR(20) DEFAULT 'ACTIVA' CHECK (estado_uc IN ('ACTIVA', 'INACTIVA', 'EN_DESARROLLO')),
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    creado TIMESTAMPTZ NOT NULL DEFAULT now(),
+    actualizado TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 COMMENT ON TABLE academico.unidades_curriculares IS 'Unidades Curriculares (materias/asignaturas)';
 
@@ -349,7 +349,7 @@ CREATE TABLE academico.prelaciones (
     uc_requisito_id UUID NOT NULL REFERENCES academico.unidades_curriculares(id) ON DELETE CASCADE,
     tipo_prelacion VARCHAR(20) DEFAULT 'ESTRICTA' 
         CHECK (tipo_prelacion IN ('ESTRICTA', 'PARALELO', 'CORREQUISITO', 'RECOMENDADA')),
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    creado TIMESTAMPTZ NOT NULL DEFAULT now(),
     UNIQUE(uc_id, uc_requisito_id),
     CONSTRAINT chk_no_autoprelacion CHECK (uc_id != uc_requisito_id)
 );
@@ -369,7 +369,7 @@ CREATE TABLE academico.periodos_academicos (
     estado academico.estado_periodo NOT NULL DEFAULT 'PLANIFICACION',
     es_periodo_extraordinario BOOLEAN DEFAULT false,
     periodo_anterior_id UUID REFERENCES academico.periodos_academicos(id),
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    creado TIMESTAMPTZ NOT NULL DEFAULT now(),
     CONSTRAINT chk_fechas_periodo CHECK (fecha_fin > fecha_inicio),
     CONSTRAINT chk_fechas_inscripcion CHECK (fecha_fin_inscripcion >= fecha_inicio_inscripcion)
 );
@@ -387,7 +387,7 @@ CREATE TABLE academico.cohortes (
     estado_cohorte VARCHAR(20) DEFAULT 'ACTIVA' 
         CHECK (estado_cohorte IN ('ACTIVA', 'CERRADA', 'HISTORICA')),
     fecha_cierre DATE,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    creado TIMESTAMPTZ NOT NULL DEFAULT now(),
     UNIQUE(pnf_id, ano_ingreso, periodo_ingreso_id)
 );
 COMMENT ON TABLE academico.cohortes IS 'Cohortes de ingreso de estudiantes';
@@ -406,8 +406,8 @@ CREATE TABLE academico.espacios_fisicos (
     ubicacion_detalle TEXT,
     estado_espacio VARCHAR(20) DEFAULT 'ACTIVO' 
         CHECK (estado_espacio IN ('ACTIVO', 'INACTIVO', 'MANTENIMIENTO', 'RESERVADO')),
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    creado TIMESTAMPTZ NOT NULL DEFAULT now(),
+    actualizado TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 COMMENT ON TABLE academico.espacios_fisicos IS 'Espacios físicos (aulas, laboratorios, auditorios)';
 
@@ -420,7 +420,7 @@ CREATE TABLE academico.oferta_academica (
     publicada BOOLEAN NOT NULL DEFAULT false,
     fecha_publicacion TIMESTAMPTZ,
     publicada_por UUID REFERENCES seguridad.usuarios(id),
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    creado TIMESTAMPTZ NOT NULL DEFAULT now(),
     UNIQUE(periodo_id, pnf_id, trayecto)
 );
 COMMENT ON TABLE academico.oferta_academica IS 'Oferta académica por período y PNF';
@@ -437,8 +437,8 @@ CREATE TABLE academico.secciones (
     horario_json JSONB NOT NULL DEFAULT '[]',
     estado_seccion VARCHAR(20) DEFAULT 'PLANIFICADA' 
         CHECK (estado_seccion IN ('PLANIFICADA', 'ABIERTA', 'EN_CURSO', 'FINALIZADA', 'CANCELADA')),
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    creado TIMESTAMPTZ NOT NULL DEFAULT now(),
+    actualizado TIMESTAMPTZ NOT NULL DEFAULT now(),
     UNIQUE(oferta_id, uc_id, codigo_seccion),
     CONSTRAINT chk_cupos CHECK (cupo_disponible <= cupo_total)
 );
@@ -474,8 +474,8 @@ CREATE TABLE estudiantes.estudiantes (
     fecha_ingreso DATE NOT NULL,
     fecha_egreso DATE,
     fecha_titulacion DATE,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    creado TIMESTAMPTZ NOT NULL DEFAULT now(),
+    actualizado TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 COMMENT ON TABLE estudiantes.estudiantes IS 'Datos específicos de estudiantes';
 
@@ -505,8 +505,8 @@ CREATE TABLE academico.inscripciones (
     fecha_cierre_acta DATE,
     inscrito_por UUID REFERENCES seguridad.usuarios(id),
     validado_por UUID REFERENCES seguridad.usuarios(id),
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    creado TIMESTAMPTZ NOT NULL DEFAULT now(),
+    actualizado TIMESTAMPTZ NOT NULL DEFAULT now(),
     hash_integridad VARCHAR(64),
     UNIQUE(estudiante_id, uc_id, periodo_id, nro_intento)
 );
@@ -522,7 +522,7 @@ CREATE TABLE academico.sesiones_clase (
     hora_fin TIME,
     tema TEXT,
     created_by UUID REFERENCES seguridad.usuarios(id),
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    creado TIMESTAMPTZ NOT NULL DEFAULT now(),
     UNIQUE(seccion_id, fecha)
 );
 COMMENT ON TABLE academico.sesiones_clase IS 'Sesiones diarias de clase';
@@ -535,7 +535,7 @@ CREATE TABLE academico.registro_asistencia (
     estado VARCHAR(20) NOT NULL CHECK (estado IN ('PRESENTE', 'AUSENTE', 'JUSTIFICADO', 'RETARDO')),
     observacion TEXT,
     registrado_por UUID REFERENCES seguridad.usuarios(id),
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    creado TIMESTAMPTZ NOT NULL DEFAULT now(),
     UNIQUE(sesion_id, estudiante_id)
 );
 COMMENT ON TABLE academico.registro_asistencia IS 'Registro de asistencia por sesión y estudiante';
@@ -555,7 +555,7 @@ CREATE TABLE academico.moodle_sync_jobs (
     log_detalle JSONB DEFAULT '[]',
     error_general TEXT,
     ejecutado_por UUID REFERENCES seguridad.usuarios(id),
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    creado TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 COMMENT ON TABLE academico.moodle_sync_jobs IS 'Jobs de sincronización con Moodle';
 
@@ -587,7 +587,7 @@ COMMENT ON TABLE academico.evaluaciones_moodle IS 'Datos crudos importados de Mo
 CREATE TABLE academico.programas (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     nombre VARCHAR(120) NOT NULL,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    creado TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 COMMENT ON TABLE academico.programas IS 'Programas académicos adicionales';
 
@@ -629,8 +629,8 @@ CREATE TABLE docentes.docentes (
     estado_docente VARCHAR(20) DEFAULT 'ACTIVO' 
         CHECK (estado_docente IN ('ACTIVO', 'INACTIVO', 'LICENCIA', 'JUBILADO')),
     fecha_ingreso_institucion DATE,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    creado TIMESTAMPTZ NOT NULL DEFAULT now(),
+    actualizado TIMESTAMPTZ NOT NULL DEFAULT now(),
     CONSTRAINT chk_carga_horaria CHECK (horas_asignadas_actual <= horas_maximas_semanales)
 );
 COMMENT ON TABLE docentes.docentes IS 'Datos profesionales de docentes';
@@ -663,7 +663,7 @@ CREATE TABLE secretaria.tipos_documento (
     es_obligatorio BOOLEAN DEFAULT true,
     formatos_permitidos VARCHAR(100) DEFAULT 'PDF,JPG,PNG',
     tamano_maximo_mb INT DEFAULT 5,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    creado TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 COMMENT ON TABLE secretaria.tipos_documento IS 'Catálogo de tipos de documento para expedientes';
 
@@ -674,7 +674,7 @@ CREATE TABLE secretaria.requisitos_expediente (
     pnf_id UUID REFERENCES academico.pnf_carreras(id) ON DELETE CASCADE,
     tipo_documento_id UUID NOT NULL REFERENCES secretaria.tipos_documento(id) ON DELETE CASCADE,
     obligatorio BOOLEAN NOT NULL DEFAULT true,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    creado TIMESTAMPTZ NOT NULL DEFAULT now(),
     UNIQUE(cohorte_id, pnf_id, tipo_documento_id)
 );
 COMMENT ON TABLE secretaria.requisitos_expediente IS 'Requisitos de documentos por cohorte/PNF';
@@ -720,8 +720,8 @@ CREATE TABLE secretaria.actas (
     metadatos_pdf JSONB DEFAULT '{}',
     cerrado_por UUID REFERENCES seguridad.usuarios(id),
     cerrado_en TIMESTAMPTZ,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    creado TIMESTAMPTZ NOT NULL DEFAULT now(),
+    actualizado TIMESTAMPTZ NOT NULL DEFAULT now(),
     UNIQUE(seccion_id, periodo_id)
 );
 COMMENT ON TABLE secretaria.actas IS 'Actas de calificaciones oficiales';
@@ -737,7 +737,7 @@ CREATE TABLE secretaria.acta_items (
     nota_moodle_100 NUMERIC(5,2) CHECK (nota_moodle_100 IS NULL OR (nota_moodle_100 BETWEEN 0 AND 100)),
     asistio BOOLEAN DEFAULT true,
     observacion TEXT,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    creado TIMESTAMPTZ NOT NULL DEFAULT now(),
     UNIQUE(acta_id, estudiante_id)
 );
 COMMENT ON TABLE secretaria.acta_items IS 'Items de calificaciones por estudiante en cada acta';
@@ -756,8 +756,8 @@ CREATE TABLE secretaria.solicitudes_certificados (
     revisado_por UUID REFERENCES seguridad.usuarios(id),
     revisado_at TIMESTAMPTZ,
     motivo_rechazo TEXT,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    creado TIMESTAMPTZ NOT NULL DEFAULT now(),
+    actualizado TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 COMMENT ON TABLE secretaria.solicitudes_certificados IS 'Solicitudes de certificados y constancias';
 
@@ -803,7 +803,7 @@ CREATE TABLE secretaria.tipos_tramite (
     descripcion TEXT,
     requiere_aprobacion BOOLEAN DEFAULT true,
     dias_maximos_respuesta INT,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    creado TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 COMMENT ON TABLE secretaria.tipos_tramite IS 'Catálogo de tipos de trámite';
 
@@ -823,8 +823,8 @@ CREATE TABLE secretaria.tramites (
     motivo_resolucion TEXT,
     resuelto_por UUID REFERENCES seguridad.usuarios(id),
     resuelto_at TIMESTAMPTZ,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    creado TIMESTAMPTZ NOT NULL DEFAULT now(),
+    actualizado TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 COMMENT ON TABLE secretaria.tramites IS 'Trámites estudiantiles';
 
@@ -835,7 +835,7 @@ CREATE TABLE secretaria.tramites_historial (
     estado secretaria.estado_tramite NOT NULL,
     comentario TEXT,
     cambiado_por UUID REFERENCES seguridad.usuarios(id),
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    creado TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 COMMENT ON TABLE secretaria.tramites_historial IS 'Historial de cambios de estado en trámites';
 
@@ -865,7 +865,7 @@ CREATE TABLE finanzas.conceptos_pago (
     activo BOOLEAN NOT NULL DEFAULT true,
     vigencia_desde DATE,
     vigencia_hasta DATE,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    creado TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 COMMENT ON TABLE finanzas.conceptos_pago IS 'Conceptos de pago (aranceles, certificaciones, etc.)';
 
@@ -891,7 +891,7 @@ CREATE TABLE finanzas.pagos_aranceles (
     ip_registro INET,
     conciliado BOOLEAN DEFAULT false,
     fecha_conciliacion TIMESTAMPTZ,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    creado TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 COMMENT ON TABLE finanzas.pagos_aranceles IS 'Pagos realizados por estudiantes';
 
@@ -921,7 +921,7 @@ CREATE TABLE auditoria.logs_auditoria (
     user_agent TEXT,
     session_id UUID,
     hash_registro VARCHAR(64) NOT NULL,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    creado TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 COMMENT ON TABLE auditoria.logs_auditoria IS 'Logs detallados de auditoría del sistema';
 
@@ -937,7 +937,7 @@ CREATE TABLE auditoria.logs (
     motivo TEXT,
     ip_address VARCHAR(45),
     user_agent TEXT,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    creado TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 COMMENT ON TABLE auditoria.logs IS 'Logs simplificados de auditoría';
 
@@ -955,14 +955,14 @@ CREATE TABLE auditoria.cambios_calificaciones (
     autorizado_por UUID REFERENCES seguridad.usuarios(id),
     ip_modificacion INET,
     metodo VARCHAR(20) CHECK (metodo IN ('MANUAL', 'SYNC_MOODLE', 'CORRECCION', 'REVISION')),
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    creado TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 COMMENT ON TABLE auditoria.cambios_calificaciones IS 'Auditoría específica de cambios en calificaciones';
 
 -- Índices de auditoría
-CREATE INDEX idx_auditoria_usuario ON auditoria.logs_auditoria(usuario_id, created_at DESC);
-CREATE INDEX idx_auditoria_tabla ON auditoria.logs_auditoria(tabla_afectada, created_at DESC);
-CREATE INDEX idx_auditoria_fecha ON auditoria.logs_auditoria(created_at DESC);
+CREATE INDEX idx_auditoria_usuario ON auditoria.logs_auditoria(usuario_id, creado DESC);
+CREATE INDEX idx_auditoria_tabla ON auditoria.logs_auditoria(tabla_afectada, creado DESC);
+CREATE INDEX idx_auditoria_fecha ON auditoria.logs_auditoria(creado DESC);
 CREATE INDEX idx_auditoria_registro ON auditoria.logs_auditoria(tabla_afectada, registro_id);
 CREATE INDEX idx_auditoria_json ON auditoria.logs_auditoria USING GIN (valor_nuevo);
 
@@ -978,8 +978,8 @@ CREATE TABLE configuracion.parametros_sistema (
     descripcion TEXT,
     tipo_dato VARCHAR(50) DEFAULT 'TEXT',
     modificable BOOLEAN DEFAULT true,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    creado TIMESTAMPTZ NOT NULL DEFAULT now(),
+    actualizado TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 COMMENT ON TABLE configuracion.parametros_sistema IS 'Parámetros de configuración del sistema';
 
@@ -992,8 +992,8 @@ CREATE TABLE configuracion.plantillas_certificados (
     contenido_html TEXT,
     estilos_css TEXT,
     activo BOOLEAN DEFAULT true,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    creado TIMESTAMPTZ NOT NULL DEFAULT now(),
+    actualizado TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 COMMENT ON TABLE configuracion.plantillas_certificados IS 'Plantillas para generación de certificados';
 
@@ -1006,8 +1006,8 @@ CREATE TABLE configuracion.plantillas_correo (
     cuerpo TEXT NOT NULL,
     variables JSONB DEFAULT '[]',
     activo BOOLEAN DEFAULT true,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    creado TIMESTAMPTZ NOT NULL DEFAULT now(),
+    actualizado TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 COMMENT ON TABLE configuracion.plantillas_correo IS 'Plantillas para correos electrónicos';
 
@@ -1019,8 +1019,8 @@ CREATE TABLE configuracion.periodos_especiales (
     fecha_fin DATE NOT NULL,
     descripcion TEXT,
     activo BOOLEAN DEFAULT true,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    creado TIMESTAMPTZ NOT NULL DEFAULT now(),
+    actualizado TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 COMMENT ON TABLE configuracion.periodos_especiales IS 'Períodos especiales (vacaciones, días no laborables)';
 
@@ -1031,8 +1031,8 @@ CREATE TABLE configuracion.calendario_academico (
     fecha DATE NOT NULL,
     tipo_evento VARCHAR(50) NOT NULL,
     descripcion TEXT,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    creado TIMESTAMPTZ NOT NULL DEFAULT now(),
+    actualizado TIMESTAMPTZ NOT NULL DEFAULT now(),
     UNIQUE(periodo_id, fecha)
 );
 COMMENT ON TABLE configuracion.calendario_academico IS 'Eventos del calendario académico';
@@ -1047,8 +1047,8 @@ CREATE TABLE configuracion.convenios_empresariales (
     fecha_fin DATE,
     beneficios JSONB DEFAULT '{}',
     activo BOOLEAN DEFAULT true,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    creado TIMESTAMPTZ NOT NULL DEFAULT now(),
+    actualizado TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 COMMENT ON TABLE configuracion.convenios_empresariales IS 'Convenios con empresas para becas y pasantías';
 
@@ -1061,8 +1061,8 @@ CREATE TABLE configuracion.becas_tipos (
     porcentaje_base INT CHECK (porcentaje_base BETWEEN 0 AND 100),
     requiere_socioeconomico BOOLEAN DEFAULT true,
     activo BOOLEAN DEFAULT true,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    creado TIMESTAMPTZ NOT NULL DEFAULT now(),
+    actualizado TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 COMMENT ON TABLE configuracion.becas_tipos IS 'Tipos de becas disponibles';
 
@@ -1250,15 +1250,15 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 COMMENT ON FUNCTION auditoria.fn_auditoria_general() IS 'Función trigger para auditoría automática';
 
--- Función 3: Set updated_at
+-- Función 3: Set actualizado
 CREATE OR REPLACE FUNCTION fn_set_updated_at()
 RETURNS TRIGGER AS $$
 BEGIN
-    NEW.updated_at := now();
+    NEW.actualizado := now();
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
-COMMENT ON FUNCTION fn_set_updated_at() IS 'Actualiza automáticamente el campo updated_at';
+COMMENT ON FUNCTION fn_set_updated_at() IS 'Actualiza automáticamente el campo actualizado';
 
 -- Función 4: Calcular índice académico
 CREATE OR REPLACE FUNCTION academico.fn_calcular_indice(p_estudiante_id UUID)
@@ -1441,7 +1441,7 @@ CREATE TRIGGER trg_auditoria_expediente
     FOR EACH ROW EXECUTE FUNCTION auditoria.fn_auditoria_general();
 COMMENT ON TRIGGER trg_auditoria_expediente ON secretaria.expediente_documentos IS 'Audita cambios en documentos de expediente';
 
--- Triggers de updated_at
+-- Triggers de actualizado
 CREATE TRIGGER trg_usuarios_updated_at
     BEFORE UPDATE ON seguridad.usuarios
     FOR EACH ROW EXECUTE FUNCTION fn_set_updated_at();

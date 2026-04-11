@@ -8,7 +8,7 @@ id!: string;
 @Column({ unique: true, length: 20 })
 cedula!: string;
 
-@Column({ type: 'citext', unique: true })
+@Column({ name: 'correo_principal', type: 'citext', unique: true })
 email!: string;
 
 @Column({ name: 'password_hash', length: 255 })
@@ -38,9 +38,9 @@ estado_usuario!: string;
 @Column({ name: 'intentos_fallidos', default: 0 })
 intentos_fallidos!: number;
 
-@CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
+@CreateDateColumn({ name: 'creado', type: 'timestamptz' })
 created_at!: Date;
 
-@UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })
+@UpdateDateColumn({ name: 'actualizado', type: 'timestamptz' })
 updated_at!: Date;
 }
