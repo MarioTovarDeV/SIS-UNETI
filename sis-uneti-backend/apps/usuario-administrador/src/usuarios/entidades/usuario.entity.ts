@@ -47,16 +47,17 @@ intentos_fallidos!: number;
 @Column({
     type: 'enum',
     enum: [
-      'ESTUDIANTES',
-      'DOCENTES',
+'ESTUDIANTE',                     // Singular para coincidir con SQL
+      'DOCENTE',                        // Singular para coincidir con SQL
       'ANALISTA',
-      'COORDINADOR_CARRERA',
-      'COORDINADOR_CE',
+      'COORDINADOR_ACADEMICO',          // Nombre técnico definitivo
+      'COORDINADOR_CONTROL_ESTUDIOS',   // Nombre técnico definitivo
+      'COORDINADOR_EGRESOS',            // Nombre técnico definitivo
       'ADMINISTRADOR',
       'AUDITOR',
     ],
-    default: 'ESTUDIANTES',
-    name: 'rol_usuario',
+    default: 'ESTUDIANTE',              // singular 
+    name: 'rol_usuario', 
   })
   rol!: string;
 }

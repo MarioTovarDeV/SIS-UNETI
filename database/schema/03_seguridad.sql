@@ -86,9 +86,8 @@ COMMENT ON TABLE seguridad.rol_permisos IS 'Asignación de permisos a roles';
 CREATE TABLE seguridad.sesiones (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     usuario_id UUID NOT NULL REFERENCES seguridad.usuarios(id) ON DELETE CASCADE,
-    token_hash VARCHAR(255) NOT NULL,
-    refresh_token_hash VARCHAR(255),
-    ip_address INET,
+    token_hash TEXT NOT NULL,
+    refresh_token_hash TEXT,
     user_agent TEXT,
     dispositivo_fingerprint VARCHAR(255),
     fecha_inicio TIMESTAMPTZ NOT NULL DEFAULT now(),

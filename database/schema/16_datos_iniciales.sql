@@ -43,4 +43,4 @@ INSERT INTO finanzas.conceptos_pago (codigo, nombre, monto_base, es_obligatorio)
 ('CARNET', 'Carnet Estudiantil', 0, false),
 ('TITULO', 'Título Universitario', 0, false)
 ON CONFLICT (codigo) DO NOTHING;
-
+
